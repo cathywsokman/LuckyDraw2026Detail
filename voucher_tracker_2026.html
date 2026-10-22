@@ -178,6 +178,7 @@
             selectedWeek: 'w1',
             vouchers: [], 
             drawTimes: {}, 
+            drawDays: {}, // Added drawDays state
             modalOpen: false,
             modalPlatformId: null,
             selectedVoucherOpt: null
@@ -203,8 +204,10 @@
         function saveState() {
             try {
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                    selectedWeek: state.selectedWeek,
                     vouchers: state.vouchers,
-                    drawTimes: state.drawTimes
+                    drawTimes: state.drawTimes,
+                    drawDays: state.drawDays
                 }));
             } catch (e) {
                 console.error("Could not save to LocalStorage", e);
@@ -216,8 +219,10 @@
                 const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
                 if (saved) {
                     const parsed = JSON.parse(saved);
+                    if (parsed.selectedWeek) state.selectedWeek = parsed.selectedWeek;
                     if (parsed.vouchers) state.vouchers = parsed.vouchers;
                     if (parsed.drawTimes) state.drawTimes = parsed.drawTimes;
+                    if (parsed.drawDays) state.drawDays = parsed.drawDays;
                 }
             } catch (e) {
                 console.error("Could not load from LocalStorage", e);
@@ -247,8 +252,13 @@
 
             // Populate the week dropdown
             weekSelector.innerHTML = WEEKS.map(w => `<option value="${w.id}">${w.label}</option>`).join('');
+            
+            // Set the saved week as selected
+            weekSelector.value = state.selectedWeek;
+
             weekSelector.addEventListener('change', (e) => {
                 state.selectedWeek = e.target.value;
+                saveState(); // Save the new week selection immediately
                 render();
             });
 
@@ -292,6 +302,7 @@
                 
                 const timeKey = `${state.selectedWeek}_${platform.id}`;
                 const drawTime = state.drawTimes[timeKey] || '';
+                const drawDay = state.drawDays[timeKey] || '';
 
                 // Build HTML for the 3 slots
                 let slotsHtml = '';
@@ -350,13 +361,21 @@
                                 ${platform.name}
                             </div>
                             
-                            <!-- Draw Time Input -->
-                            <div class="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm" title="選擇抽獎時間">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="text-gray-400 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                <input type="time" 
-                                       value="${drawTime}"
-                                       onchange="updateTime('${platform.id}', this.value)"
-                                       class="text-sm font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-gray-700 p-0 m-0 cursor-pointer">
+                            <!-- Draw Time & Day Input -->
+                            <div class="flex items-center gap-2">
+                                <select onchange="updateDay('${platform.id}', this.value)" class="text-sm font-semibold bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-2 py-1.5 shadow-sm focus:outline-none focus:border-purple-400 cursor-pointer">
+                                    <option value="" ${drawDay === '' ? 'selected' : ''}>星期</option>
+                                    <option value="五" ${drawDay === '五' ? 'selected' : ''}>五</option>
+                                    <option value="六" ${drawDay === '六' ? 'selected' : ''}>六</option>
+                                    <option value="日" ${drawDay === '日' ? 'selected' : ''}>日</option>
+                                </select>
+                                <div class="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm" title="選擇抽獎時間">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="text-gray-400 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    <input type="time" 
+                                           value="${drawTime}"
+                                           onchange="updateTime('${platform.id}', this.value)"
+                                           class="text-sm font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-gray-700 p-0 m-0 cursor-pointer">
+                                </div>
                             </div>
                         </div>
 
@@ -460,6 +479,12 @@
         window.updateTime = function(platformId, timeValue) {
             const timeKey = `${state.selectedWeek}_${platformId}`;
             state.drawTimes[timeKey] = timeValue;
+            saveState();
+        }
+
+        window.updateDay = function(platformId, dayValue) {
+            const timeKey = `${state.selectedWeek}_${platformId}`;
+            state.drawDays[timeKey] = dayValue;
             saveState();
         }
 
